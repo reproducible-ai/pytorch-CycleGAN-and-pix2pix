@@ -55,6 +55,15 @@ wandb/
 datasets/facades/*
 !datasets/facades/
 !datasets/facades/.gitkeep
+!datasets/facades/train/
+datasets/facades/train/*
+!datasets/facades/train/.gitkeep
+!datasets/facades/test/
+datasets/facades/test/*
+!datasets/facades/test/.gitkeep
+!datasets/facades/val/
+datasets/facades/val/*
+!datasets/facades/val/.gitkeep
 checkpoints/row022_facades_pix2pix/*
 !checkpoints/row022_facades_pix2pix/
 !checkpoints/row022_facades_pix2pix/.gitkeep
