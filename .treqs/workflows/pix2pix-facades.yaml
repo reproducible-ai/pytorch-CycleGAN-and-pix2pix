@@ -46,7 +46,7 @@ setup:
     /usr/local/bin/uv venv --python /opt/pytorch/bin/python /opt/row022-venv
     test -f /opt/row022-venv/pyvenv.cfg
     grep -qx 'include-system-site-packages = false' /opt/row022-venv/pyvenv.cfg
-    /usr/local/bin/uv pip install --python /opt/row022-venv/bin/python torch==2.4.0 torchvision==0.19.0 numpy==1.24.3 scikit-image==0.25.2 pillow==11.3.0 dominate==2.9.1 wandb==0.21.1 trackio==0.6.0
+    /usr/local/bin/uv pip install --python /opt/row022-venv/bin/python torch==2.4.0 torchvision==0.19.0 numpy==1.24.3 scikit-image==0.25.2 pillow==11.3.0 dominate==2.9.1 wandb==0.21.1
     roar --version
     roar tracer use preload
     roar tracer
@@ -58,8 +58,8 @@ fetch_dataset:
     export PATH=/opt/pytorch/bin:$PATH
     export PATH=/opt/row022-venv/bin:$PATH
 
-    export TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
-    roar run -n fetch_dataset --wandb-to-trackio -- bash ./datasets/download_pix2pix_dataset.sh facades
+    export PYTHONUNBUFFERED=1
+    roar run -n fetch_dataset -- bash ./datasets/download_pix2pix_dataset.sh facades
   trace: off
 
 train:
@@ -67,8 +67,8 @@ train:
     export PATH=/opt/pytorch/bin:$PATH
     export PATH=/opt/row022-venv/bin:$PATH
 
-    export TRACKIO_SPACE_ID=reproducible-ai/experiments PYTHONUNBUFFERED=1
-    roar run -n train --wandb-to-trackio -- env TRACKIO_SPACE_ID=reproducible-ai/experiments python train.py --dataroot ./datasets/facades --name row022_facades_pix2pix --model pix2pix --netG unet_256 --direction BtoA --lambda_L1 100 --dataset_mode aligned --norm batch --pool_size 0 --n_epochs 1 --n_epochs_decay 0 --max_dataset_size 8 --num_threads 0 --display_freq 1 --print_freq 1 --save_epoch_freq 1 --no_html --use_wandb --wandb_project_name row022-cyclegan-pix2pix
+    export PYTHONUNBUFFERED=1
+    roar run -n train -- python train.py --dataroot ./datasets/facades --name row022_facades_pix2pix --model pix2pix --netG unet_256 --direction BtoA --lambda_L1 100 --dataset_mode aligned --norm batch --pool_size 0 --n_epochs 1 --n_epochs_decay 0 --max_dataset_size 8 --num_threads 0 --display_freq 1 --print_freq 1 --save_epoch_freq 1 --no_html
   trace: off
 
 label:
