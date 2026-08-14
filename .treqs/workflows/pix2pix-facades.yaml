@@ -20,6 +20,19 @@ secrets:
 
 setup:
   command: |
+    set -x
+    # Preflight: record what this image actually provides before anything depends
+    # on it, and hold briefly so this block reaches the log transport even if a
+    # later command ends the stage early.
+    id; pwd; df -h / | tail -1
+    python3 -V || echo "NO python3"
+    ls -d /opt/pytorch /opt/pytorch/bin/python 2>/dev/null || echo "NO /opt/pytorch"
+    command -v uv >/dev/null 2>&1 && uv --version || echo "NO uv on image"
+    command -v roar >/dev/null 2>&1 && roar --version || echo "NO roar on image"
+    sudo -n true 2>/dev/null && echo "SUDO: passwordless" || echo "SUDO: unavailable"
+    test -n "$HF_TOKEN" && echo "HF_TOKEN: present (${#HF_TOKEN} chars)" || echo "HF_TOKEN: MISSING"
+    echo "--- preflight complete ---"
+    sleep 20
     export PATH=/opt/pytorch/bin:$PATH
     python -m pip install --quiet requests || true
     rm -rf *.egg-info src/*.egg-info
