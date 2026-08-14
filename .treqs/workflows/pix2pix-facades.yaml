@@ -32,7 +32,6 @@ setup:
     sudo -n true 2>/dev/null && echo "SUDO: passwordless" || echo "SUDO: unavailable"
     test -n "$HF_TOKEN" && echo "HF_TOKEN: present (${#HF_TOKEN} chars)" || echo "HF_TOKEN: MISSING"
     echo "--- preflight complete ---"
-    sleep 20
     export PATH=/opt/pytorch/bin:$PATH
     python -m pip install --quiet requests || true
     rm -rf *.egg-info src/*.egg-info
