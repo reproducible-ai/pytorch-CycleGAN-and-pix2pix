@@ -5,7 +5,18 @@ name: pix2pix-facades reproduction
 # (.gitkeep) with files gitignored; publish --no-tag. Adjust commands as needed.
 
 secrets:
-  - HF_TOKEN            # wandb->trackio sync + roar put upload
+  - HF_TOKEN            # roar put upload
+
+# Experiment logging is deliberately OFF, and this is a finding, not an oversight.
+# Upstream does ship a logging flag (--use_wandb, options/base_options.py:57), but
+# util/visualizer.py:70 calls the private wandb API `run._label(repo=...)` on the
+# object returned by wandb.init(). No wandb-compatible substitute implements
+# `_label`, so enabling the flag raises AttributeError and ends the run. Separately,
+# util/visualizer.py:7 imports wandb unconditionally at module import time, so
+# aliasing wandb would record the substitute in place of the wandb this repo
+# genuinely requires. Both run stages therefore take upstream's own default
+# (--use_wandb off) with a real wandb installed, and this row publishes no
+# experiment link.
 
 setup:
   command: |
@@ -13,7 +24,7 @@ setup:
     python -m pip install --quiet requests || true
     rm -rf *.egg-info src/*.egg-info
     if command -v uv >/dev/null 2>&1; then
-      test "$(uv --version | awk '{{print $1, $2}}')" = "uv 0.12.3"
+      test "$(uv --version | awk '{print $1, $2}')" = "uv 0.12.3"
       echo UV_SOURCE=baked
     else
       curl -fsSL -o /tmp/uv-campaign.tar.gz \
@@ -21,7 +32,7 @@ setup:
       echo "600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101  /tmp/uv-campaign.tar.gz" | sha256sum -c -
       tar -xzf /tmp/uv-campaign.tar.gz -C /tmp
       sudo install -m 0755 /tmp/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv
-      test "$(/usr/local/bin/uv --version | awk '{{print $1, $2}}')" = "uv 0.12.3"
+      test "$(/usr/local/bin/uv --version | awk '{print $1, $2}')" = "uv 0.12.3"
       echo UV_SOURCE=bootstrapped
     fi
     curl -sS -o /tmp/roar_wheel/roar_cli-0.4.4rc7-cp310-abi3-manylinux_2_34_x86_64.whl --create-dirs "https://test-files.pythonhosted.org/packages/61/98/f7925c6aeba591de9e490bc2b070737e17b5ed948b2cb05ef8b86730537a/roar_cli-0.4.4rc7-cp310-abi3-manylinux_2_34_x86_64.whl"
@@ -46,7 +57,7 @@ setup:
     /usr/local/bin/uv venv --python /opt/pytorch/bin/python /opt/row022-venv
     test -f /opt/row022-venv/pyvenv.cfg
     grep -qx 'include-system-site-packages = false' /opt/row022-venv/pyvenv.cfg
-    /usr/local/bin/uv pip install --python /opt/row022-venv/bin/python torch==2.4.0 torchvision==0.19.0 numpy==1.24.3 scikit-image==0.25.2 pillow==11.3.0 dominate==2.9.1 wandb==0.21.1
+    /usr/local/bin/uv pip install --python /opt/row022-venv/bin/python torch==2.4.0 torchvision==0.19.0 numpy==1.26.4 scikit-image==0.25.2 pillow==11.3.0 dominate==2.9.1 wandb==0.21.1
     roar --version
     roar tracer use preload
     roar tracer
@@ -68,18 +79,18 @@ train:
     export PATH=/opt/row022-venv/bin:$PATH
 
     export PYTHONUNBUFFERED=1
-    roar run -n train -- python train.py --dataroot ./datasets/facades --name row022_facades_pix2pix --model pix2pix --netG unet_256 --direction BtoA --lambda_L1 100 --dataset_mode aligned --norm batch --pool_size 0 --n_epochs 1 --n_epochs_decay 0 --max_dataset_size 8 --num_threads 0 --display_freq 1 --print_freq 1 --save_epoch_freq 1 --no_html
+    roar run -n train -- python train.py --dataroot ./datasets/facades --name facades_pix2pix --model pix2pix --direction BtoA --n_epochs 1 --n_epochs_decay 1 --save_epoch_freq 1 --num_threads 0
   trace: off
 
 label:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
-    roar label set artifact checkpoints/row022_facades_pix2pix/latest_net_G.pth model.name=pix2pix-facades model.version=2026-08-12 license.id='BSD-2-Clause AND BSD-3-Clause' license.name='BSD 2-Clause and BSD 3-Clause licenses' description='Pix2pix conditional GAN trained on paired Facades images' documentation.url='https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix#pix2pix-traintest'
+    roar label set artifact checkpoints/facades_pix2pix/latest_net_G.pth model.name=pix2pix-facades model.version=2026-08-14 license.id='BSD-2-Clause AND BSD-3-Clause' license.name='BSD 2-Clause and BSD 3-Clause licenses' description='pix2pix conditional GAN (UNet-256 generator, 70x70 PatchGAN discriminator) trained on the 400-image CMP Facades paired dataset, labels->photo' documentation.url='https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix#pix2pix-traintest'
   trace: off
 
 publish:
   command: |
     export PATH=/opt/pytorch/bin:$PATH
     roar status --untracked-dirs
-    roar put checkpoints/row022_facades_pix2pix/latest_net_G.pth hf://reproducible-ai/pix2pix-facades --public --yes --no-tag -m "Truncated pix2pix Facades training: 1 epoch over 8 paired images; checkpoint is not converged."
+    roar put checkpoints/facades_pix2pix/latest_net_G.pth checkpoints/facades_pix2pix/latest_net_D.pth hf://reproducible-ai/pix2pix-facades --public --yes --no-tag -m "pix2pix Facades labels->photo, TRUNCATED to 2 of 200 epochs (1 constant-LR + 1 decay) over all 400 training pairs; checkpoint is NOT converged."
   trace: off
