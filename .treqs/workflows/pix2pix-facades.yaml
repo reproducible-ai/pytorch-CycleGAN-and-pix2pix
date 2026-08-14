@@ -91,7 +91,17 @@ train:
     export PATH=/opt/row022-venv/bin:$PATH
 
     export PYTHONUNBUFFERED=1
+    # Sample GPU memory once a second for the duration of training and report the
+    # peak. Written under /tmp so it stays out of the worktree and out of lineage,
+    # and started outside the recorded command so it does not affect it.
+    nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits -l 1 > /tmp/row022-gpu-mem.csv 2>/dev/null &
+    SAMPLER=$!
     roar run -n train -- python train.py --dataroot ./datasets/facades --name facades_pix2pix --model pix2pix --direction BtoA --n_epochs 1 --n_epochs_decay 1 --save_epoch_freq 1 --num_threads 0
+    RC=$?
+    kill $SAMPLER 2>/dev/null || true
+    echo "PEAK GPU MEMORY: $(sort -n -r /tmp/row022-gpu-mem.csv | head -1) MiB (nvidia-smi 1 Hz sampling; includes CUDA context and allocator reserve)"
+    echo "GPU MEMORY SAMPLES: $(wc -l < /tmp/row022-gpu-mem.csv)"
+    exit $RC
   trace: off
 
 label:
